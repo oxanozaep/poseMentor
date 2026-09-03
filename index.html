@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>GoodPose - 3D Motion Coach</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+  <style>
+    :root { --primary: #10b981; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h1 { margin: 0; color: var(--primary); font-size: 28px; }
+    
+    /* Panel de Control */
+    .controls-card { max-width: 980px; margin: 0 auto 20px; background: var(--card); border-radius: 12px; padding: 20px; display: flex; gap: 20px; align-items: center; justify-content: space-around; flex-wrap: wrap; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    .control-group { display: flex; flex-direction: column; gap: 8px; }
+    label { font-weight: 600; font-size: 14px; color: #94a3b8; }
+    select, input { background: #334155; color: white; border: 1px solid #475569; padding: 8px 12px; border-radius: 8px; font-size: 16px; outline: none; }
+    .btn-start { background: var(--primary); color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .btn-start:hover { opacity: 0.9; transform: scale(1.02); }
+    .btn-stop { background: #ef4444; }
+
+    /* Temporizador */
+    .timer-display { font-size: 32px; font-weight: 800; color: var(--primary); min-width: 80px; text-align: center; }
+
+    /* Video Stream */
+    .container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    .card { background: var(--card); border-radius: 12px; padding: 12px; }
+    .video-box { position: relative; width: 460px; height: 260px; background: #000; border-radius: 8px; overflow: hidden; }
+    video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+
+    /* Panel de Métricas y Feedback */
+    #dashboard { max-width: 980px; margin: 20px auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .panel { background: var(--card); border-radius: 12px; padding: 20px; }
+    .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155; }
+    .status-ok { color: #10b981; font-weight: bold; }
+    .status-warn { color: #f59e0b; font-weight: bold; }
+    .status-bad { color: #ef4444; font-weight: bold; }
+    .coach-bubble { background: #334155; border-left: 4px solid var(--primary); padding: 15px; border-radius: 0 8px 8px 0; font-style: italic; min-height: 50px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🧘 GoodPose AI Coach</h1>
+    <p style="color: #94a3b8; margin: 5px 0;">Entrenador Biomecánico en Tiempo Real</p>
+  </div>
+
+  <!-- Controles -->
+  <div class="controls-card">
+    <div class="control-group">
+      <label for="pose-select">Selecciona el Ejercicio:</label>
+      <select id="pose-select">
+        <option value="downdog">Perro Boca Abajo (Estático - Yoga)</option>
+        <option value="goblet_squat">Goblet Squat (Dinámico - Fuerza)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="time-input">Duración (segundos):</label>
+      <input type="number" id="time-input" value="45" min="10" max="300">
+    </div>
+
+    <div class="timer-display" id="timer">00:00</div>
+    <button class="btn-start" id="btn-session" onclick="toggleSession()">Iniciar Sesión</button>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h4 style="margin:0 0 8px 0;">Cámara Frontal</h4>
+      <div class="video-box">
+        <video id="video-front" autoplay playsinline muted></video>
+        <canvas id="canvas-front"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin:0 0 8px 0;">Cámara Trasera</h4>
+      <div class="video-box">
+        <video id="video-back" autoplay playsinline muted></video>
+        <canvas id="canvas-back"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="dashboard">
+    <div class="panel">
+      <h3>Métricas Biomecánicas</h3>
+      <div id="metrics-list">Inicia la sesión para empezar a evaluar...</div>
+    </div>
+    <div class="panel">
+      <h3>Feedback del Profesor</h3>
+      <div class="coach-bubble" id="coach-feedback">Configura tu ejercicio y pulsa "Iniciar Sesión".</div>
+      <p id="reps-counter" style="display:none; font-weight:bold; color:var(--primary); margin-top:10px;">Repeticiones: 0</p>
+    </div>
+  </div>
+
+  <script>
+    const FRONT_WHEP = "http://goodpose-front.local:8889/stream/whep";
+    const BACK_WHEP  = "http://goodpose-back.local:8889/stream/whep";
+
+    // Estado de la Sesión
+    let isSessionActive = false;
+    let timerInterval = null;
+    let secondsLeft = 0;
+    let currentPose = "downdog";
+
+    // Memoria del Profesor (Evitar repetición y detectar mejoras)
+    let errorHistory = {}; // { 'rodilla': { lastSeen: timestamp, count: 2, fixed: false } }
+    let lastSpokenTime = 0;
+    const SPEECH_COOLDOWN_MS = 6000; // Mínimo 6 segundos entre consejos
+
+    // Estado para Ejercicios Dinámicos (Squat)
+    let squatState = "TOP"; // "TOP", "DESCENDING", "BOTTOM", "ASCENDING"
+    let repCount = 0;
+    let minSquatKneeAngle = 180;
+    let squatErrorsInCurrentRep = [];
+
+    // 1. WebRTC Setup
+    async function startWebRTC(videoElementId, whepUrl) {
+      const video = document.getElementById(videoElementId);
+      const pc = new RTCPeerConnection();
+      pc.addTransceiver('video', { direction: 'recvonly' });
+      pc.ontrack = (e) => { video.srcObject = e.streams[0]; };
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      try {
+        const res = await fetch(whepUrl, { method: 'POST', headers: { 'Content-Type': 'application/sdp' }, body: offer.sdp });
+        const answer = await res.text();
+        await pc.setRemoteDescription({ type: 'answer', sdp: answer });
+      } catch (e) { console.error("Error WebRTC:", e); }
+    }
+
+    // 2. Síntesis de Voz Femenina y Empática
+    let selectedVoice = null;
+    function loadVoices() {
+      const voices = window.speechSynthesis.getVoices();
+      // Buscar voz femenina en español (Mónica, Paulina, Google, Siri)
+      selectedVoice = voices.find(v => (v.lang.startsWith('es') && (v.name.includes('Mónica') || v.name.includes('Paulina') || v.name.includes('Female') || v.name.includes('Siri')))) ||
+                      voices.find(v => v.lang.startsWith('es'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function hablar(texto, prioritario = false) {
+      const now = Date.now();
+      if (!prioritario && (now - lastSpokenTime < SPEECH_COOLDOWN_MS)) return;
+      
+      window.speechSynthesis.cancel(); // Cancelar locución anterior si es urgente
+      const utterance = new SpeechSynthesisUtterance(texto);
+      if (selectedVoice) utterance.voice = selectedVoice;
+      utterance.lang = 'es-ES';
+      utterance.rate = 0.92; // Tono tranquilo y fluido
+      utterance.pitch = 1.05; // Timbre natural femenino
+      window.speechSynthesis.speak(utterance);
+      
+      lastSpokenTime = now;
+      document.getElementById('coach-feedback').innerText = texto;
+    }
+
+    // 3. Matemáticas Biomecánicas
+    function calcularAngulo(A, B, C) {
+      const v1 = { x: A.x - B.x, y: A.y - B.y, z: (A.z || 0) - (B.z || 0) };
+      const v2 = { x: C.x - B.x, y: C.y - B.y, z: (C.z || 0) - (C.z || 0) };
+      const dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+      const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
+      const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y + v2.z * v2.z);
+      return Math.round(Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2)))) * (180 / Math.PI));
+    }
+
+    // 4. MOTOR BIOMECÁNICO 1: Perro Boca Abajo (Estático)
+    function evaluarDowndog(lm) {
+      const hombro = lm[11], cadera = lm[23], rodilla = lm[25], tobillo = lm[27], muneca = lm[15];
+      
+      const angRodilla = calcularAngulo(cadera, rodilla, tobillo);
+      const angCadera = calcularAngulo(hombro, cadera, tobillo);
+      const angHombro = calcularAngulo(muneca, hombro, cadera);
+
+      let html = `
+        <div class="metric"><span>Extensión de Rodillas:</span> <span class="${angRodilla >= 160 ? 'status-ok' : 'status-bad'}">${angRodilla}° (Ideal: 180°)</span></div>
+        <div class="metric"><span>Flexión de Cadera (V invertida):</span> <span class="${angCadera >= 65 && angCadera <= 95 ? 'status-ok' : 'status-warn'}">${angCadera}° (Ideal: 80°)</span></div>
+        <div class="metric"><span>Apertura de Hombros:</span> <span class="${angHombro >= 165 ? 'status-ok' : 'status-bad'}">${angHombro}° (Ideal: 180°)</span></div>
+      `;
+      document.getElementById('metrics-list').innerHTML = html;
+
+      // Gestión de Errores y Mejoras
+      evaluarErrorMemoria('rodillas_flexionadas', angRodilla < 160, 
+        "Respira con calma, y estira un poco más las piernas empujando los muslos hacia atrás.",
+        "Muy bien corregido, excelente extensión de piernas.");
+
+      evaluarErrorMemoria('cadera_baja', angCadera > 95, 
+        "Eleva suavemente la pelvis hacia el techo para profundizar en la postura.",
+        "Perfecto, esa alineación de cadera es ideal.");
+    }
+
+    // 5. MOTOR BIOMECÁNICO 2: Goblet Squat (Dinámico por Fases)
+    function evaluarGobletSquat(lm) {
+      const hombro = lm[11], cadera = lm[23], rodilla = lm[25], tobillo = lm[27];
+      const angRodilla = calcularAngulo(cadera, rodilla, tobillo);
+      const angTorso = calcularAngulo({x: cadera.x, y: cadera.y - 1}, cadera, hombro); // Inclinación del torso respecto vertical
+
+      document.getElementById('reps-counter').style.display = 'block';
+      document.getElementById('metrics-list').innerHTML = `
+        <div class="metric"><span>Fase Actual:</span> <span class="status-ok">${squatState}</span></div>
+        <div class="metric"><span>Ángulo Rodilla:</span> <span>${angRodilla}°</span></div>
+        <div class="metric"><span>Inclinación Torso:</span> <span class="${angTorso <= 35 ? 'status-ok' : 'status-bad'}">${angTorso}° (Máx: 35°)</span></div>
+      `;
+
+      // Máquina de Estados del Squat
+      if (squatState === "TOP" && angRodilla < 150) {
+        squatState = "DESCENDING";
+        minSquatKneeAngle = 180;
+        squatErrorsInCurrentRep = [];
+      } 
+      else if (squatState === "DESCENDING") {
+        if (angRodilla < minSquatKneeAngle) minSquatKneeAngle = angRodilla;
+        if (angTorso > 40) squatErrorsInCurrentRep.push("torso_inclinado");
+
+        if (angRodilla <= 95) {
+          squatState = "BOTTOM";
+        }
+      } 
+      else if (squatState === "BOTTOM" && angRodilla > 110) {
+        squatState = "ASCENDING";
+      } 
+      else if (squatState === "ASCENDING" && angRodilla >= 165) {
+        squatState = "TOP";
+        repCount++;
+        document.getElementById('reps-counter').innerText = `Repeticiones: ${repCount}`;
+        
+        // Feedback al completar la repetición
+        if (minSquatKneeAngle > 100) {
+          hablar("Intenta bajar un poco más profundo en la siguiente repetición, buscando los noventa grados.");
+        } else if (squatErrorsInCurrentRep.includes("torso_inclinado")) {
+          hablar("Buena profundidad, pero mantén el pecho más erguido al bajar para proteger tu espalda.");
+        } else {
+          hablar("¡Excelente repetición! Muy buen control.", true);
+        }
+      }
+    }
+
+    // 6. Sistema de Memoria y Feedback Empático
+    function evaluarErrorMemoria(idError, hayError, mensajeError, mensajeMejora) {
+      const now = Date.now();
+      if (!errorHistory[idError]) errorHistory[idError] = { activo: false, count: 0 };
+
+      if (hayError) {
+        if (!errorHistory[idError].activo) {
+          errorHistory[idError].activo = true;
+          errorHistory[idError].count++;
+          hablar(mensajeError);
+        }
+      } else {
+        if (errorHistory[idError].activo) {
+          errorHistory[idError].activo = false;
+          hablar(mensajeMejora, true); // Felicita de inmediato al mejorar
+        }
+      }
+    }
+
+    // 7. Control de Sesión y Temporizador
+    function toggleSession() {
+      const btn = document.getElementById('btn-session');
+      if (isSessionActive) {
+        // Detener
+        isSessionActive = false;
+        clearInterval(timerInterval);
+        btn.innerText = "Iniciar Sesión";
+        btn.classList.remove('btn-stop');
+        hablar("Sesión finalizada. Has hecho un gran trabajo.");
+      } else {
+        // Iniciar
+        isSessionActive = true;
+        currentPose = document.getElementById('pose-select').value;
+        secondsLeft = parseInt(document.getElementById('time-input').value);
+        repCount = 0;
+        errorHistory = {};
+        
+        btn.innerText = "Detener Sesión";
+        btn.classList.add('btn-stop');
+        
+        hablar(`Comenzamos. Colócate en tu esterilla para iniciar ${currentPose === 'downdog' ? 'el perro boca abajo' : 'el goblet squat'}.`);
+
+        timerInterval = setInterval(() => {
+          secondsLeft--;
+          const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+          const secs = String(secondsLeft % 60).padStart(2, '0');
+          document.getElementById('timer').innerText = `${mins}:${secs}`;
+
+          if (secondsLeft <= 0) {
+            toggleSession();
+          }
+        }, 1000);
+      }
+    }
+
+    // 8. Pipeline de IA con MediaPipe
+    const poseFront = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+    poseFront.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5 });
+    
+    poseFront.onResults((results) => {
+      if (!isSessionActive || !results.poseLandmarks) return;
+
+      if (currentPose === 'downdog') {
+        evaluarDowndog(results.poseLandmarks);
+      } else if (currentPose === 'goblet_squat') {
+        evaluarGobletSquat(results.poseLandmarks);
+      }
+    });
+
+    window.onload = () => {
+      startWebRTC('video-front', FRONT_WHEP);
+      startWebRTC('video-back', BACK_WHEP);
+
+      const video = document.getElementById('video-front');
+      const processFrame = async () => {
+        if (video.readyState >= 2) {
+          await poseFront.send({ image: video });
+        }
+        requestAnimationFrame(processFrame);
+      };
+      video.onloadeddata = () => processFrame();
+    };
+  </script>
+</body>
+</html>
