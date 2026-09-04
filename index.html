@@ -6,116 +6,382 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <style>
-    :root { --primary: #10b981; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; }
+    :root {
+      --primary: #10b981;
+      --primary-glow: rgba(16, 185, 129, 0.2);
+      --bg: #0b0f19;
+      --surface: #151e32;
+      --surface-light: #1f2d4a;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+    }
+
+    * { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-    .header { text-align: center; margin-bottom: 20px; }
-    .header h1 { margin: 0; color: var(--primary); font-size: 28px; }
-    
-    /* Panel de Control */
-    .controls-card { max-width: 980px; margin: 0 auto 20px; background: var(--card); border-radius: 12px; padding: 20px; display: flex; gap: 20px; align-items: center; justify-content: space-around; flex-wrap: wrap; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-    .control-group { display: flex; flex-direction: column; gap: 8px; }
-    label { font-weight: 600; font-size: 14px; color: #94a3b8; }
-    select, input { background: #334155; color: white; border: 1px solid #475569; padding: 8px 12px; border-radius: 8px; font-size: 16px; outline: none; }
-    .btn-start { background: var(--primary); color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-    .btn-start:hover { opacity: 0.9; transform: scale(1.02); }
-    .btn-stop { background: #ef4444; }
 
-    /* Temporizador */
-    .timer-display { font-size: 32px; font-weight: 800; color: var(--primary); min-width: 80px; text-align: center; }
+    /* Pantallas de Selección (Wizard) */
+    .wizard-container { max-width: 650px; margin: 60px auto; background: var(--surface); border-radius: 20px; padding: 35px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center; }
+    .wizard-title { font-size: 26px; margin-bottom: 8px; color: var(--primary); }
+    .wizard-subtitle { color: var(--text-muted); margin-bottom: 30px; font-size: 15px; }
+    .grid-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 25px; }
+    .option-card { background: var(--surface-light); border: 2px solid transparent; border-radius: 12px; padding: 20px 10px; cursor: pointer; transition: all 0.2s ease; }
+    .option-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+    .option-card.selected { border-color: var(--primary); background: var(--primary-glow); }
+    .btn-next { background: var(--primary); color: #fff; border: none; padding: 14px 35px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .btn-next:hover { opacity: 0.9; }
 
-    /* Video Stream */
-    .container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
-    .card { background: var(--card); border-radius: 12px; padding: 12px; }
-    .video-box { position: relative; width: 460px; height: 260px; background: #000; border-radius: 8px; overflow: hidden; }
+    /* Entorno de Práctica */
+    #session-view { display: none; max-width: 1400px; margin: 0 auto; }
+    .session-header { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 15px 25px; border-radius: 14px; margin-bottom: 20px; }
+    .pose-info h2 { margin: 0; font-size: 22px; }
+    .pose-info p { margin: 4px 0 0 0; color: var(--primary); font-size: 14px; }
+    .breath-timer { font-size: 26px; font-weight: 800; color: var(--primary); }
+
+    .main-grid { display: grid; grid-template-columns: 320px 1fr 340px; gap: 20px; align-items: start; }
+
+    /* Tarjeta Visual de Referencia */
+    .reference-card { background: var(--surface); border-radius: 14px; padding: 15px; text-align: center; }
+    .reference-card img { width: 100%; height: 320px; object-fit: contain; background: #fff; border-radius: 10px; padding: 10px; }
+
+    /* Cámaras */
+    .cameras-col { display: flex; flex-direction: column; gap: 15px; }
+    .video-box { position: relative; width: 100%; height: 230px; background: #000; border-radius: 10px; overflow: hidden; }
     video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
 
-    /* Panel de Métricas y Feedback */
-    #dashboard { max-width: 980px; margin: 20px auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .panel { background: var(--card); border-radius: 12px; padding: 20px; }
-    .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155; }
-    .status-ok { color: #10b981; font-weight: bold; }
-    .status-warn { color: #f59e0b; font-weight: bold; }
-    .status-bad { color: #ef4444; font-weight: bold; }
-    .coach-bubble { background: #334155; border-left: 4px solid var(--primary); padding: 15px; border-radius: 0 8px 8px 0; font-style: italic; min-height: 50px; }
+    /* Panel Anatómico / Métricas */
+    .metrics-col { background: var(--surface); border-radius: 14px; padding: 20px; }
+    .score-circle { width: 110px; height: 110px; border-radius: 50%; background: var(--surface-light); border: 5px solid var(--primary); margin: 0 auto 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .score-value { font-size: 28px; font-weight: 800; color: var(--primary); }
+    .score-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+
+    .tabs { display: flex; gap: 8px; margin-bottom: 15px; }
+    .tab-btn { flex: 1; background: var(--surface-light); border: none; color: var(--text-muted); padding: 8px 4px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; }
+    .tab-btn.active { background: var(--primary); color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .metric-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--surface-light); font-size: 13px; }
+    .status-ok { color: var(--primary); font-weight: 600; }
+    .status-bad { color: var(--danger); font-weight: 600; }
+
+    .coach-feedback-box { background: var(--surface-light); border-left: 4px solid var(--primary); padding: 12px 15px; border-radius: 0 8px 8px 0; font-size: 14px; font-style: italic; min-height: 48px; margin-top: 15px; }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <h1>🧘 GoodPose AI Coach</h1>
-    <p style="color: #94a3b8; margin: 5px 0;">Entrenador Biomecánico en Tiempo Real</p>
-  </div>
-
-  <!-- Controles -->
-  <div class="controls-card">
-    <div class="control-group">
-      <label for="pose-select">Selecciona el Ejercicio:</label>
-      <select id="pose-select">
-        <option value="downdog">Perro Boca Abajo (Estático - Yoga)</option>
-        <option value="goblet_squat">Goblet Squat (Dinámico - Fuerza)</option>
-      </select>
-    </div>
-
-    <div class="control-group">
-      <label for="time-input">Duración (segundos):</label>
-      <input type="number" id="time-input" value="45" min="10" max="300">
-    </div>
-
-    <div class="timer-display" id="timer">00:00</div>
-    <button class="btn-start" id="btn-session" onclick="toggleSession()">Iniciar Sesión</button>
-  </div>
-
-  <div class="container">
-    <div class="card">
-      <h4 style="margin:0 0 8px 0;">Cámara Frontal</h4>
-      <div class="video-box">
-        <video id="video-front" autoplay playsinline muted></video>
-        <canvas id="canvas-front"></canvas>
+  <!-- ==================== WIZARD DE SELECCIÓN ==================== -->
+  <div id="wizard" class="wizard-container">
+    <!-- Paso 1: Disciplina -->
+    <div id="step-1">
+      <h2 class="wizard-title">Selecciona la Disciplina</h2>
+      <p class="wizard-subtitle">Elige el estilo de entrenamiento para tu sesión de hoy</p>
+      <div class="grid-options">
+        <div class="option-card selected" onclick="selectOption(this, 'discipline', 'Yoga')">🧘 Yoga</div>
+        <div class="option-card" onclick="selectOption(this, 'discipline', 'Calistenia')">💪 Calistenia</div>
       </div>
+      <button class="btn-next" onclick="goToStep(2)">Continuar</button>
     </div>
-    <div class="card">
-      <h4 style="margin:0 0 8px 0;">Cámara Trasera</h4>
-      <div class="video-box">
-        <video id="video-back" autoplay playsinline muted></video>
-        <canvas id="canvas-back"></canvas>
+
+    <!-- Paso 2: Duración -->
+    <div id="step-2" style="display:none;">
+      <h2 class="wizard-title">Duración de la Práctica</h2>
+      <p class="wizard-subtitle">Selecciona el tiempo disponible</p>
+      <div class="grid-options">
+        <div class="option-card selected" onclick="selectOption(this, 'duration', 5)">5 min</div>
+        <div class="option-card" onclick="selectOption(this, 'duration', 10)">10 min</div>
+        <div class="option-card" onclick="selectOption(this, 'duration', 15)">15 min</div>
+        <div class="option-card" onclick="selectOption(this, 'duration', 20)">20 min</div>
+        <div class="option-card" onclick="selectOption(this, 'duration', 30)">30 min</div>
+        <div class="option-card" onclick="selectOption(this, 'duration', 45)">45 min</div>
+        <div class="option-card" onclick="selectOption(this, 'duration', 60)">60 min</div>
+        <div class="option-card" onclick="selectOption(this, 'duration', 90)">90 min</div>
       </div>
+      <button class="btn-next" onclick="goToStep(3)">Continuar</button>
+    </div>
+
+    <!-- Paso 3: Nivel -->
+    <div id="step-3" style="display:none;">
+      <h2 class="wizard-title">Nivel de Exigencia</h2>
+      <p class="wizard-subtitle">Ajustaremos la rigurosidad del análisis biomecánico</p>
+      <div class="grid-options">
+        <div class="option-card" onclick="selectOption(this, 'level', 'Principiante')">Principiante</div>
+        <div class="option-card selected" onclick="selectOption(this, 'level', 'Intermedio')">Intermedio</div>
+        <div class="option-card" onclick="selectOption(this, 'level', 'Avanzado')">Avanzado</div>
+      </div>
+      <button class="btn-next" onclick="startSession()">Comenzar Clase</button>
     </div>
   </div>
 
-  <div id="dashboard">
-    <div class="panel">
-      <h3>Métricas Biomecánicas</h3>
-      <div id="metrics-list">Inicia la sesión para empezar a evaluar...</div>
+  <!-- ==================== SESIÓN EN VIVO ==================== -->
+  <div id="session-view">
+    <div class="session-header">
+      <div class="pose-info">
+        <h2 id="pose-display-name">Postura de la Montaña</h2>
+        <p id="pose-sanskrit-name">Samasthiti (Tadasana)</p>
+      </div>
+      <div class="breath-timer" id="breath-timer">🌬️ 10 Respiraciones</div>
     </div>
-    <div class="panel">
-      <h3>Feedback del Profesor</h3>
-      <div class="coach-bubble" id="coach-feedback">Configura tu ejercicio y pulsa "Iniciar Sesión".</div>
-      <p id="reps-counter" style="display:none; font-weight:bold; color:var(--primary); margin-top:10px;">Repeticiones: 0</p>
+
+    <div class="main-grid">
+      <!-- Columna 1: Guía Visual -->
+      <div class="reference-card">
+        <h4 style="margin:0 0 10px 0; color:var(--text-muted);">Alineación Objetivo</h4>
+        <img id="reference-img" src="" alt="Postura de Yoga">
+      </div>
+
+      <!-- Columna 2: Cámaras Duales -->
+      <div class="cameras-col">
+        <div class="video-box">
+          <video id="video-front" autoplay playsinline muted></video>
+          <canvas id="canvas-front"></canvas>
+        </div>
+        <div class="video-box">
+          <video id="video-back" autoplay playsinline muted></video>
+          <canvas id="canvas-back"></canvas>
+        </div>
+      </div>
+
+      <!-- Columna 3: Métricas y Puntuación -->
+      <div class="metrics-col">
+        <div class="score-circle">
+          <div class="score-value" id="global-score">0%</div>
+          <div class="score-label">Dominio</div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('tab-upper')">Superior</button>
+          <button class="tab-btn" onclick="switchTab('tab-core')">Columna</button>
+          <button class="tab-btn" onclick="switchTab('tab-lower')">Inferior</button>
+        </div>
+
+        <div id="tab-upper" class="tab-content active">
+          <div class="metric-row"><span>Ángulo de Hombros:</span><span id="m-shoulder" class="status-ok">180°</span></div>
+          <div class="metric-row"><span>Extensión de Codos:</span><span id="m-elbow" class="status-ok">180°</span></div>
+          <div class="metric-row"><span>Simetría de Brazos:</span><span id="m-arm-sym" class="status-ok">Óptima</span></div>
+        </div>
+
+        <div id="tab-core" class="tab-content">
+          <div class="metric-row"><span>Inclinación Torso:</span><span id="m-torso" class="status-ok">0°</span></div>
+          <div class="metric-row"><span>Flexión Cadera:</span><span id="m-hip" class="status-ok">180°</span></div>
+          <div class="metric-row"><span>Alineación Cervical:</span><span id="m-neck" class="status-ok">Neutro</span></div>
+        </div>
+
+        <div id="tab-lower" class="tab-content">
+          <div class="metric-row"><span>Extensión Rodillas:</span><span id="m-knee" class="status-ok">180°</span></div>
+          <div class="metric-row"><span>Distancia Pies:</span><span id="m-feet" class="status-ok">Alineada</span></div>
+          <div class="metric-row"><span>Apoyo de Talones:</span><span id="m-heels" class="status-ok">Suelo</span></div>
+        </div>
+
+        <div class="coach-feedback-box" id="coach-text">Conectando con las cámaras y preparando tu espacio...</div>
+      </div>
     </div>
   </div>
 
   <script>
+    // Configuración WebRTC MediaMTX
     const FRONT_WHEP = "http://goodpose-front.local:8889/stream/whep";
     const BACK_WHEP  = "http://goodpose-back.local:8889/stream/whep";
 
-    // Estado de la Sesión
-    let isSessionActive = false;
-    let timerInterval = null;
-    let secondsLeft = 0;
-    let currentPose = "downdog";
+    // 1. BASE DE DATOS DE LA SECUENCIA: SURYA NAMASKAR A (5 Min / Intermedio)
+    // Cada respiración dura 5.5 segundos.
+    const SEQUENCE = [
+      { id: "samasthiti", name: "Postura de la Montaña", sanskrit: "Samasthiti", durationBreaths: 11, durationSec: 60, img: "samasthiti.png", script: "Comienza en la Postura de la Montaña, Samasthiti. Enraíza los pies en la esterilla, alarga la coronilla al cielo y respira profundo." },
+      { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, eleva los brazos al cielo, Urdhva Hastasana. Alarga los costados." },
+      { id: "uttanasana", name: "Flexión hacia adelante", sanskrit: "Uttanasana", durationBreaths: 1, durationSec: 5, img: "uttanasana.png", script: "Exhala, flexiónate hacia la tierra desde las caderas, Uttanasana. Relaja el cuello." },
+      { id: "ardha_uttanasana", name: "Media flexión", sanskrit: "Ardha Uttanasana", durationBreaths: 1, durationSec: 5, img: "ardha uttanasana.png", script: "Inhala, alarga la columna hacia el frente, Ardha Uttanasana." },
+      { id: "chaturanga", name: "Postura de cuatro puntos", sanskrit: "Chaturanga Dandasana", durationBreaths: 1, durationSec: 5, img: "chaturanga dandasana.png", script: "Exhala, flexiona codos pegados a las costillas, Chaturanga Dandasana. Activa el core." },
+      { id: "urdhva_mukha", name: "Perro boca arriba", sanskrit: "Urdhva Mukha Svanasana", durationBreaths: 1, durationSec: 5, img: "urdhva mukha svanasana.png", script: "Inhala, abre el pecho hacia adelante, Perro boca arriba, Urdhva Mukha Svanasana." },
+      { id: "adho_mukha", name: "Perro boca abajo", sanskrit: "Adho Mukha Svanasana", durationBreaths: 5, durationSec: 30, img: "adho mukha svanasana.png", script: "Exhala, eleva las caderas hacia el cielo, Perro boca abajo, Adho Mukha Svanasana. Nos quedamos aquí cinco respiraciones conscientes." },
+      { id: "ardha_uttanasana", name: "Media flexión", sanskrit: "Ardha Uttanasana", durationBreaths: 1, durationSec: 5, img: "ardha uttanasana.png", script: "Inhala, camina al frente y extiende la espalda." },
+      { id: "uttanasana", name: "Flexión hacia adelante", sanskrit: "Uttanasana", durationBreaths: 1, durationSec: 5, img: "uttanasana.png", script: "Exhala, pliega el torso hacia las piernas." },
+      { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, ponte de pie elevando brazos al cielo." },
+      { id: "samasthiti", name: "Postura de la Montaña", sanskrit: "Samasthiti", durationBreaths: 1, durationSec: 5, img: "samasthiti.png", script: "Exhala, manos al pecho en Samasthiti." },
+      // Repetición 2
+      { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, eleva los brazos, alarga la energía." },
+      { id: "uttanasana", name: "Flexión hacia adelante", sanskrit: "Uttanasana", durationBreaths: 1, durationSec: 5, img: "uttanasana.png", script: "Exhala, desciende suavemente a la tierra." },
+      { id: "ardha_uttanasana", name: "Media flexión", sanskrit: "Ardha Uttanasana", durationBreaths: 1, durationSec: 5, img: "ardha uttanasana.png", script: "Inhala, proyecta el pecho al horizonte." },
+      { id: "chaturanga", name: "Postura de cuatro puntos", sanskrit: "Chaturanga Dandasana", durationBreaths: 1, durationSec: 5, img: "chaturanga dandasana.png", script: "Exhala, desciende manteniendo el cuerpo en una sola línea firme." },
+      { id: "urdhva_mukha", name: "Perro boca arriba", sanskrit: "Urdhva Mukha Svanasana", durationBreaths: 1, durationSec: 5, img: "urdhva mukha svanasana.png", script: "Inhala, empuja la tierra y abre el corazón." },
+      { id: "adho_mukha", name: "Perro boca abajo", sanskrit: "Adho Mukha Svanasana", durationBreaths: 5, durationSec: 30, img: "adho mukha svanasana.png", script: "Exhala, caderas arriba. Cinco respiraciones profundas para encontrar espacio." },
+      { id: "ardha_uttanasana", name: "Media flexión", sanskrit: "Ardha Uttanasana", durationBreaths: 1, durationSec: 5, img: "ardha uttanasana.png", script: "Inhala, alarga la columna al frente." },
+      { id: "uttanasana", name: "Flexión hacia adelante", sanskrit: "Uttanasana", durationBreaths: 1, durationSec: 5, img: "uttanasana.png", script: "Exhala, entrégate al estiramiento." },
+      { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, crece hacia arriba con todo tu cuerpo." },
+      { id: "samasthiti", name: "Postura de la Montaña", sanskrit: "Samasthiti", durationBreaths: 1, durationSec: 5, img: "samasthiti.png", script: "Exhala, Samasthiti. Calma tu respiración." },
+      // Repetición 3
+      { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, brazos al cielo, Urdhva Hastasana." },
+      { id: "uttanasana", name: "Flexión hacia adelante", sanskrit: "Uttanasana", durationBreaths: 1, durationSec: 5, img: "uttanasana.png", script: "Exhala, pliega el cuerpo desde la cadera." },
+      { id: "ardha_uttanasana", name: "Media flexión", sanskrit: "Ardha Uttanasana", durationBreaths: 1, durationSec: 5, img: "ardha uttanasana.png", script: "Inhala, media pinza, alarga la espalda." },
+      { id: "chaturanga", name: "Postura de cuatro puntos", sanskrit: "Chaturanga Dandasana", durationBreaths: 1, durationSec: 5, img: "chaturanga dandasana.png", script: "Exhala, codos firmes hacia las costillas." },
+      { id: "urdhva_mukha", name: "Perro boca arriba", sanskrit: "Urdhva Mukha Svanasana", durationBreaths: 1, durationSec: 5, img: "urdhva mukha svanasana.png", script: "Inhala, hombros lejos de las orejas en Urdhva Mukha." },
+      { id: "adho_mukha", name: "Perro boca abajo", sanskrit: "Adho Mukha Svanasana", durationBreaths: 5, durationSec: 30, img: "adho mukha svanasana.png", script: "Exhala, cinco últimas respiraciones en Perro boca abajo. Alarga tus isquiones." },
+      { id: "ardha_uttanasana", name: "Media flexión", sanskrit: "Ardha Uttanasana", durationBreaths: 1, durationSec: 5, img: "ardha uttanasana.png", script: "Inhala, paso largo al frente y extiende." },
+      { id: "uttanasana", name: "Flexión hacia adelante", sanskrit: "Uttanasana", durationBreaths: 1, durationSec: 5, img: "uttanasana.png", script: "Exhala, abraza tus piernas suavemente." },
+      { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, elévate al cielo por última vez." },
+      { id: "samasthiti", name: "Postura de la Montaña", sanskrit: "Samasthiti", durationBreaths: 4, durationSec: 20, img: "samasthiti.png", script: "Exhala en Samasthiti. Cierra los ojos y siente la energía fluir por tu cuerpo." }
+    ];
 
-    // Memoria del Profesor (Evitar repetición y detectar mejoras)
-    let errorHistory = {}; // { 'rodilla': { lastSeen: timestamp, count: 2, fixed: false } }
+    // Variables de Estado
+    let currentPoseIndex = 0;
+    let poseTimeRemaining = 0;
+    let poseTimer = null;
     let lastSpokenTime = 0;
-    const SPEECH_COOLDOWN_MS = 6000; // Mínimo 6 segundos entre consejos
+    const SPEECH_GAP_MS = 5500; // Ventana para no interrumpir respiraciones
+    let selectedVoice = null;
 
-    // Estado para Ejercicios Dinámicos (Squat)
-    let squatState = "TOP"; // "TOP", "DESCENDING", "BOTTOM", "ASCENDING"
-    let repCount = 0;
-    let minSquatKneeAngle = 180;
-    let squatErrorsInCurrentRep = [];
+    // Reglas Biomecánicas Teóricas
+    const IDEAL_RULES = {
+      samasthiti: { knee: 180, hip: 180, shoulder: 20, elbow: 180 },
+      urdhva_hastasana: { knee: 180, hip: 180, shoulder: 180, elbow: 180 },
+      uttanasana: { knee: 175, hip: 40, shoulder: 30, elbow: 180 },
+      ardha_uttanasana: { knee: 175, hip: 90, shoulder: 40, elbow: 180 },
+      chaturanga: { knee: 180, hip: 180, elbow: 90, shoulder: 25 },
+      urdhva_mukha: { knee: 180, hip: 140, shoulder: 85, elbow: 180 },
+      adho_mukha: { knee: 180, hip: 75, shoulder: 180, elbow: 180 }
+    };
 
-    // 1. WebRTC Setup
+    // Navegación del Wizard
+    function selectOption(elem, type, val) {
+      elem.parentElement.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+      elem.classList.add('selected');
+    }
+
+    function goToStep(step) {
+      document.getElementById('step-1').style.display = 'none';
+      document.getElementById('step-2').style.display = 'none';
+      document.getElementById('step-3').style.display = 'none';
+      document.getElementById(`step-${step}`).style.display = 'block';
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    // Inicializar Voz Femenina
+    function initVoice() {
+      const voices = window.speechSynthesis.getVoices();
+      selectedVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Mónica') || v.name.includes('Paulina') || v.name.includes('Siri') || v.name.includes('Female'))) ||
+                      voices.find(v => v.lang.startsWith('es'));
+    }
+    window.speechSynthesis.onvoiceschanged = initVoice;
+    initVoice();
+
+    function hablar(texto, urgente = false) {
+      const now = Date.now();
+      if (!urgente && (now - lastSpokenTime < SPEECH_GAP_MS)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(texto);
+      if (selectedVoice) u.voice = selectedVoice;
+      u.lang = 'es-ES';
+      u.rate = 0.9; // Ritmo pausado de yoga
+      u.pitch = 1.05;
+      window.speechSynthesis.speak(u);
+      lastSpokenTime = now;
+      document.getElementById('coach-text').innerText = texto;
+    }
+
+    // Iniciar Sesión de Clase
+    function startSession() {
+      document.getElementById('wizard').style.display = 'none';
+      document.getElementById('session-view').style.display = 'block';
+
+      startWebRTC('video-front', FRONT_WHEP);
+      startWebRTC('video-back', BACK_WHEP);
+
+      currentPoseIndex = 0;
+      loadPose(currentPoseIndex);
+    }
+
+    function loadPose(idx) {
+      if (idx >= SEQUENCE.length) {
+        hablar("Práctica finalizada. Namasté.", true);
+        return;
+      }
+      const pose = SEQUENCE[idx];
+      document.getElementById('pose-display-name').innerText = pose.name;
+      document.getElementById('pose-sanskrit-name').innerText = pose.sanskrit;
+      document.getElementById('reference-img').src = pose.img;
+
+      poseTimeRemaining = pose.durationSec;
+      updateBreathDisplay(poseTimeRemaining);
+
+      // Guion maestro de entrada
+      hablar(pose.script, true);
+
+      clearInterval(poseTimer);
+      poseTimer = setInterval(() => {
+        poseTimeRemaining--;
+        updateBreathDisplay(poseTimeRemaining);
+
+        if (poseTimeRemaining <= 0) {
+          clearInterval(poseTimer);
+          currentPoseIndex++;
+          loadPose(currentPoseIndex);
+        }
+      }, 1000);
+    }
+
+    function updateBreathDisplay(secLeft) {
+      // 1 respiración equivale aprox a 5.5 segundos
+      const breaths = Math.max(1, Math.round(secLeft / 5.5));
+      document.getElementById('breath-timer').innerText = `🌬️ ${breaths} ${breaths === 1 ? 'Respiración' : 'Respiraciones'}`;
+    }
+
+    // Biomecánica Vectorial
+    function calcularAngulo(A, B, C) {
+      const v1 = { x: A.x - B.x, y: A.y - B.y };
+      const v2 = { x: C.x - B.x, y: C.y - B.y };
+      const dot = v1.x * v2.x + v1.y * v2.y;
+      const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+      const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+      return Math.round(Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2)))) * (180 / Math.PI));
+    }
+
+    // Motor de Evaluación de Pose y Puntuación 0-100%
+    function evaluarPoseEnVivo(lm) {
+      const current = SEQUENCE[currentPoseIndex];
+      const rules = IDEAL_RULES[current.id] || IDEAL_RULES.samasthiti;
+
+      // Cálculo de ángulos actuales
+      const angKnee = calcularAngulo(lm[23], lm[25], lm[27]);
+      const angHip = calcularAngulo(lm[11], lm[23], lm[27]);
+      const angShoulder = calcularAngulo(lm[15], lm[11], lm[23]);
+      const angElbow = calcularAngulo(lm[11], lm[13], lm[15]);
+
+      // Actualizar Submenús
+      document.getElementById('m-shoulder').innerText = `${angShoulder}°`;
+      document.getElementById('m-elbow').innerText = `${angElbow}°`;
+      document.getElementById('m-hip').innerText = `${angHip}°`;
+      document.getElementById('m-knee').innerText = `${angKnee}°`;
+
+      // Diferencias y precisión
+      const diffKnee = Math.abs(angKnee - rules.knee);
+      const diffHip = Math.abs(angHip - rules.hip);
+      const diffShoulder = Math.abs(angShoulder - rules.shoulder);
+
+      let accuracy = 100 - ((diffKnee * 0.4) + (diffHip * 0.4) + (diffShoulder * 0.2));
+      accuracy = Math.max(0, Math.min(100, Math.round(accuracy)));
+      document.getElementById('global-score').innerText = `${accuracy}%`;
+
+      // Inserción de correcciones durante los silencios de respiración
+      if (poseTimeRemaining > 4) { // Dejar silencio en transiciones
+        if (accuracy > 88) {
+          hablar("Alineación perfecta. Mantén la calma en la postura.");
+        } else if (diffKnee > 25 && current.id !== 'uttanasana') {
+          hablar("Extiende un poco más las piernas empujando los muslos hacia atrás.");
+        } else if (diffHip > 20 && current.id === 'adho_mukha') {
+          hablar("Eleva más los isquiones hacia el cielo para profundizar la V invertida.");
+        } else if (diffShoulder > 25 && current.id === 'urdhva_mukha') {
+          hablar("Aleja los hombros de las orejas y expande el pecho.");
+        }
+      }
+    }
+
+    // WebRTC
     async function startWebRTC(videoElementId, whepUrl) {
       const video = document.getElementById(videoElementId);
       const pc = new RTCPeerConnection();
@@ -127,198 +393,27 @@
         const res = await fetch(whepUrl, { method: 'POST', headers: { 'Content-Type': 'application/sdp' }, body: offer.sdp });
         const answer = await res.text();
         await pc.setRemoteDescription({ type: 'answer', sdp: answer });
-      } catch (e) { console.error("Error WebRTC:", e); }
+      } catch (e) { console.error("WebRTC Error:", e); }
     }
 
-    // 2. Síntesis de Voz Femenina y Empática
-    let selectedVoice = null;
-    function loadVoices() {
-      const voices = window.speechSynthesis.getVoices();
-      // Buscar voz femenina en español (Mónica, Paulina, Google, Siri)
-      selectedVoice = voices.find(v => (v.lang.startsWith('es') && (v.name.includes('Mónica') || v.name.includes('Paulina') || v.name.includes('Female') || v.name.includes('Siri')))) ||
-                      voices.find(v => v.lang.startsWith('es'));
-    }
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    loadVoices();
-
-    function hablar(texto, prioritario = false) {
-      const now = Date.now();
-      if (!prioritario && (now - lastSpokenTime < SPEECH_COOLDOWN_MS)) return;
-      
-      window.speechSynthesis.cancel(); // Cancelar locución anterior si es urgente
-      const utterance = new SpeechSynthesisUtterance(texto);
-      if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.lang = 'es-ES';
-      utterance.rate = 0.92; // Tono tranquilo y fluido
-      utterance.pitch = 1.05; // Timbre natural femenino
-      window.speechSynthesis.speak(utterance);
-      
-      lastSpokenTime = now;
-      document.getElementById('coach-feedback').innerText = texto;
-    }
-
-    // 3. Matemáticas Biomecánicas
-    function calcularAngulo(A, B, C) {
-      const v1 = { x: A.x - B.x, y: A.y - B.y, z: (A.z || 0) - (B.z || 0) };
-      const v2 = { x: C.x - B.x, y: C.y - B.y, z: (C.z || 0) - (C.z || 0) };
-      const dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-      const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
-      const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y + v2.z * v2.z);
-      return Math.round(Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2)))) * (180 / Math.PI));
-    }
-
-    // 4. MOTOR BIOMECÁNICO 1: Perro Boca Abajo (Estático)
-    function evaluarDowndog(lm) {
-      const hombro = lm[11], cadera = lm[23], rodilla = lm[25], tobillo = lm[27], muneca = lm[15];
-      
-      const angRodilla = calcularAngulo(cadera, rodilla, tobillo);
-      const angCadera = calcularAngulo(hombro, cadera, tobillo);
-      const angHombro = calcularAngulo(muneca, hombro, cadera);
-
-      let html = `
-        <div class="metric"><span>Extensión de Rodillas:</span> <span class="${angRodilla >= 160 ? 'status-ok' : 'status-bad'}">${angRodilla}° (Ideal: 180°)</span></div>
-        <div class="metric"><span>Flexión de Cadera (V invertida):</span> <span class="${angCadera >= 65 && angCadera <= 95 ? 'status-ok' : 'status-warn'}">${angCadera}° (Ideal: 80°)</span></div>
-        <div class="metric"><span>Apertura de Hombros:</span> <span class="${angHombro >= 165 ? 'status-ok' : 'status-bad'}">${angHombro}° (Ideal: 180°)</span></div>
-      `;
-      document.getElementById('metrics-list').innerHTML = html;
-
-      // Gestión de Errores y Mejoras
-      evaluarErrorMemoria('rodillas_flexionadas', angRodilla < 160, 
-        "Respira con calma, y estira un poco más las piernas empujando los muslos hacia atrás.",
-        "Muy bien corregido, excelente extensión de piernas.");
-
-      evaluarErrorMemoria('cadera_baja', angCadera > 95, 
-        "Eleva suavemente la pelvis hacia el techo para profundizar en la postura.",
-        "Perfecto, esa alineación de cadera es ideal.");
-    }
-
-    // 5. MOTOR BIOMECÁNICO 2: Goblet Squat (Dinámico por Fases)
-    function evaluarGobletSquat(lm) {
-      const hombro = lm[11], cadera = lm[23], rodilla = lm[25], tobillo = lm[27];
-      const angRodilla = calcularAngulo(cadera, rodilla, tobillo);
-      const angTorso = calcularAngulo({x: cadera.x, y: cadera.y - 1}, cadera, hombro); // Inclinación del torso respecto vertical
-
-      document.getElementById('reps-counter').style.display = 'block';
-      document.getElementById('metrics-list').innerHTML = `
-        <div class="metric"><span>Fase Actual:</span> <span class="status-ok">${squatState}</span></div>
-        <div class="metric"><span>Ángulo Rodilla:</span> <span>${angRodilla}°</span></div>
-        <div class="metric"><span>Inclinación Torso:</span> <span class="${angTorso <= 35 ? 'status-ok' : 'status-bad'}">${angTorso}° (Máx: 35°)</span></div>
-      `;
-
-      // Máquina de Estados del Squat
-      if (squatState === "TOP" && angRodilla < 150) {
-        squatState = "DESCENDING";
-        minSquatKneeAngle = 180;
-        squatErrorsInCurrentRep = [];
-      } 
-      else if (squatState === "DESCENDING") {
-        if (angRodilla < minSquatKneeAngle) minSquatKneeAngle = angRodilla;
-        if (angTorso > 40) squatErrorsInCurrentRep.push("torso_inclinado");
-
-        if (angRodilla <= 95) {
-          squatState = "BOTTOM";
-        }
-      } 
-      else if (squatState === "BOTTOM" && angRodilla > 110) {
-        squatState = "ASCENDING";
-      } 
-      else if (squatState === "ASCENDING" && angRodilla >= 165) {
-        squatState = "TOP";
-        repCount++;
-        document.getElementById('reps-counter').innerText = `Repeticiones: ${repCount}`;
-        
-        // Feedback al completar la repetición
-        if (minSquatKneeAngle > 100) {
-          hablar("Intenta bajar un poco más profundo en la siguiente repetición, buscando los noventa grados.");
-        } else if (squatErrorsInCurrentRep.includes("torso_inclinado")) {
-          hablar("Buena profundidad, pero mantén el pecho más erguido al bajar para proteger tu espalda.");
-        } else {
-          hablar("¡Excelente repetición! Muy buen control.", true);
-        }
-      }
-    }
-
-    // 6. Sistema de Memoria y Feedback Empático
-    function evaluarErrorMemoria(idError, hayError, mensajeError, mensajeMejora) {
-      const now = Date.now();
-      if (!errorHistory[idError]) errorHistory[idError] = { activo: false, count: 0 };
-
-      if (hayError) {
-        if (!errorHistory[idError].activo) {
-          errorHistory[idError].activo = true;
-          errorHistory[idError].count++;
-          hablar(mensajeError);
-        }
-      } else {
-        if (errorHistory[idError].activo) {
-          errorHistory[idError].activo = false;
-          hablar(mensajeMejora, true); // Felicita de inmediato al mejorar
-        }
-      }
-    }
-
-    // 7. Control de Sesión y Temporizador
-    function toggleSession() {
-      const btn = document.getElementById('btn-session');
-      if (isSessionActive) {
-        // Detener
-        isSessionActive = false;
-        clearInterval(timerInterval);
-        btn.innerText = "Iniciar Sesión";
-        btn.classList.remove('btn-stop');
-        hablar("Sesión finalizada. Has hecho un gran trabajo.");
-      } else {
-        // Iniciar
-        isSessionActive = true;
-        currentPose = document.getElementById('pose-select').value;
-        secondsLeft = parseInt(document.getElementById('time-input').value);
-        repCount = 0;
-        errorHistory = {};
-        
-        btn.innerText = "Detener Sesión";
-        btn.classList.add('btn-stop');
-        
-        hablar(`Comenzamos. Colócate en tu esterilla para iniciar ${currentPose === 'downdog' ? 'el perro boca abajo' : 'el goblet squat'}.`);
-
-        timerInterval = setInterval(() => {
-          secondsLeft--;
-          const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
-          const secs = String(secondsLeft % 60).padStart(2, '0');
-          document.getElementById('timer').innerText = `${mins}:${secs}`;
-
-          if (secondsLeft <= 0) {
-            toggleSession();
-          }
-        }, 1000);
-      }
-    }
-
-    // 8. Pipeline de IA con MediaPipe
-    const poseFront = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
-    poseFront.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5 });
-    
-    poseFront.onResults((results) => {
-      if (!isSessionActive || !results.poseLandmarks) return;
-
-      if (currentPose === 'downdog') {
-        evaluarDowndog(results.poseLandmarks);
-      } else if (currentPose === 'goblet_squat') {
-        evaluarGobletSquat(results.poseLandmarks);
+    // Pipeline MediaPipe
+    const poseDetector = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+    poseDetector.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5 });
+    poseDetector.onResults((res) => {
+      if (res.poseLandmarks && document.getElementById('session-view').style.display === 'block') {
+        evaluarPoseEnVivo(res.poseLandmarks);
       }
     });
 
     window.onload = () => {
-      startWebRTC('video-front', FRONT_WHEP);
-      startWebRTC('video-back', BACK_WHEP);
-
       const video = document.getElementById('video-front');
-      const processFrame = async () => {
+      const process = async () => {
         if (video.readyState >= 2) {
-          await poseFront.send({ image: video });
+          await poseDetector.send({ image: video });
         }
-        requestAnimationFrame(processFrame);
+        requestAnimationFrame(process);
       };
-      video.onloadeddata = () => processFrame();
+      video.onloadeddata = () => process();
     };
   </script>
 </body>
