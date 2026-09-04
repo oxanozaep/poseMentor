@@ -19,54 +19,165 @@
     }
 
     * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      background: var(--bg); 
+      color: var(--text); 
+      margin: 0; 
+      padding: 20px; 
+    }
 
-    /* Pantallas de Selección (Wizard) */
-    .wizard-container { max-width: 650px; margin: 60px auto; background: var(--surface); border-radius: 20px; padding: 35px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center; }
+    /* ================= WIZARD DE SELECCIÓN ================= */
+    .wizard-container { 
+      max-width: 650px; 
+      margin: 60px auto; 
+      background: var(--surface); 
+      border-radius: 20px; 
+      padding: 35px; 
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5); 
+      text-align: center; 
+    }
     .wizard-title { font-size: 26px; margin-bottom: 8px; color: var(--primary); }
     .wizard-subtitle { color: var(--text-muted); margin-bottom: 30px; font-size: 15px; }
-    .grid-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 25px; }
-    .option-card { background: var(--surface-light); border: 2px solid transparent; border-radius: 12px; padding: 20px 10px; cursor: pointer; transition: all 0.2s ease; }
+    .grid-options { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+      gap: 15px; 
+      margin-bottom: 25px; 
+    }
+    .option-card { 
+      background: var(--surface-light); 
+      border: 2px solid transparent; 
+      border-radius: 12px; 
+      padding: 20px 10px; 
+      cursor: pointer; 
+      transition: all 0.2s ease; 
+    }
     .option-card:hover { border-color: var(--primary); transform: translateY(-2px); }
     .option-card.selected { border-color: var(--primary); background: var(--primary-glow); }
-    .btn-next { background: var(--primary); color: #fff; border: none; padding: 14px 35px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .btn-next { 
+      background: var(--primary); 
+      color: #fff; 
+      border: none; 
+      padding: 14px 35px; 
+      border-radius: 10px; 
+      font-size: 16px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      transition: 0.2s; 
+    }
     .btn-next:hover { opacity: 0.9; }
 
-    /* Entorno de Práctica */
+    /* ================= SESIÓN EN VIVO ================= */
     #session-view { display: none; max-width: 1400px; margin: 0 auto; }
-    .session-header { display: flex; justify-content: space-between; align-items: center; background: var(--surface); padding: 15px 25px; border-radius: 14px; margin-bottom: 20px; }
+    .session-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      background: var(--surface); 
+      padding: 15px 25px; 
+      border-radius: 14px; 
+      margin-bottom: 20px; 
+    }
     .pose-info h2 { margin: 0; font-size: 22px; }
     .pose-info p { margin: 4px 0 0 0; color: var(--primary); font-size: 14px; }
     .breath-timer { font-size: 26px; font-weight: 800; color: var(--primary); }
 
-    .main-grid { display: grid; grid-template-columns: 320px 1fr 340px; gap: 20px; align-items: start; }
+    .main-grid { 
+      display: grid; 
+      grid-template-columns: 320px 1.1fr 340px; 
+      gap: 20px; 
+      align-items: start; 
+    }
 
-    /* Tarjeta Visual de Referencia */
-    .reference-card { background: var(--surface); border-radius: 14px; padding: 15px; text-align: center; }
-    .reference-card img { width: 100%; height: 320px; object-fit: contain; background: #fff; border-radius: 10px; padding: 10px; }
+    /* Columna 1: Imagen de Referencia */
+    .reference-card { 
+      background: var(--surface); 
+      border-radius: 14px; 
+      padding: 15px; 
+      text-align: center; 
+    }
+    .reference-card img { 
+      width: 100%; 
+      height: 340px; 
+      object-fit: contain; 
+      background: #fff; 
+      border-radius: 10px; 
+      padding: 10px; 
+    }
 
-    /* Cámaras */
+    /* Columna 2: Cámaras (Proporción 4:3 Vertical Completa) */
     .cameras-col { display: flex; flex-direction: column; gap: 15px; }
-    .video-box { position: relative; width: 100%; height: 230px; background: #000; border-radius: 10px; overflow: hidden; }
-    video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+    .video-box { 
+      position: relative; 
+      width: 100%; 
+      aspect-ratio: 4 / 3; 
+      background: #000; 
+      border-radius: 10px; 
+      overflow: hidden; 
+    }
+    video, canvas { 
+      position: absolute; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      object-fit: contain; 
+    }
 
-    /* Panel Anatómico / Métricas */
+    /* Columna 3: Métricas y Puntuación */
     .metrics-col { background: var(--surface); border-radius: 14px; padding: 20px; }
-    .score-circle { width: 110px; height: 110px; border-radius: 50%; background: var(--surface-light); border: 5px solid var(--primary); margin: 0 auto 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .score-circle { 
+      width: 110px; 
+      height: 110px; 
+      border-radius: 50%; 
+      background: var(--surface-light); 
+      border: 5px solid var(--primary); 
+      margin: 0 auto 20px; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+    }
     .score-value { font-size: 28px; font-weight: 800; color: var(--primary); }
     .score-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
 
     .tabs { display: flex; gap: 8px; margin-bottom: 15px; }
-    .tab-btn { flex: 1; background: var(--surface-light); border: none; color: var(--text-muted); padding: 8px 4px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; }
+    .tab-btn { 
+      flex: 1; 
+      background: var(--surface-light); 
+      border: none; 
+      color: var(--text-muted); 
+      padding: 8px 4px; 
+      font-size: 12px; 
+      font-weight: 600; 
+      border-radius: 6px; 
+      cursor: pointer; 
+    }
     .tab-btn.active { background: var(--primary); color: white; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    .metric-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--surface-light); font-size: 13px; }
+    .metric-row { 
+      display: flex; 
+      justify-content: space-between; 
+      padding: 8px 0; 
+      border-bottom: 1px solid var(--surface-light); 
+      font-size: 13px; 
+    }
     .status-ok { color: var(--primary); font-weight: 600; }
     .status-bad { color: var(--danger); font-weight: 600; }
 
-    .coach-feedback-box { background: var(--surface-light); border-left: 4px solid var(--primary); padding: 12px 15px; border-radius: 0 8px 8px 0; font-size: 14px; font-style: italic; min-height: 48px; margin-top: 15px; }
+    .coach-feedback-box { 
+      background: var(--surface-light); 
+      border-left: 4px solid var(--primary); 
+      padding: 12px 15px; 
+      border-radius: 0 8px 8px 0; 
+      font-size: 14px; 
+      font-style: italic; 
+      min-height: 48px; 
+      margin-top: 15px; 
+    }
   </style>
 </head>
 <body>
@@ -76,7 +187,7 @@
     <!-- Paso 1: Disciplina -->
     <div id="step-1">
       <h2 class="wizard-title">Selecciona la Disciplina</h2>
-      <p class="wizard-subtitle">Elige el estilo de entrenamiento para tu sesión de hoy</p>
+      <p class="wizard-subtitle">Elige el estilo de práctica para la sesión de hoy</p>
       <div class="grid-options">
         <div class="option-card selected" onclick="selectOption(this, 'discipline', 'Yoga')">🧘 Yoga</div>
         <div class="option-card" onclick="selectOption(this, 'discipline', 'Calistenia')">💪 Calistenia</div>
@@ -121,14 +232,14 @@
         <h2 id="pose-display-name">Postura de la Montaña</h2>
         <p id="pose-sanskrit-name">Samasthiti (Tadasana)</p>
       </div>
-      <div class="breath-timer" id="breath-timer">🌬️ 10 Respiraciones</div>
+      <div class="breath-timer" id="breath-timer">🌬️ 11 Respiraciones</div>
     </div>
 
     <div class="main-grid">
       <!-- Columna 1: Guía Visual -->
       <div class="reference-card">
         <h4 style="margin:0 0 10px 0; color:var(--text-muted);">Alineación Objetivo</h4>
-        <img id="reference-img" src="" alt="Postura de Yoga">
+        <img id="reference-img" src="samasthiti.png" alt="Postura de Yoga">
       </div>
 
       <!-- Columna 2: Cámaras Duales -->
@@ -143,7 +254,7 @@
         </div>
       </div>
 
-      <!-- Columna 3: Métricas y Puntuación -->
+      <!-- Columna 3: Métricas Anatómicas y Puntuación -->
       <div class="metrics-col">
         <div class="score-circle">
           <div class="score-value" id="global-score">0%</div>
@@ -179,13 +290,12 @@
     </div>
   </div>
 
+  <!-- ==================== LÓGICA DE APLICACIÓN ==================== -->
   <script>
-    // Configuración WebRTC MediaMTX
     const FRONT_WHEP = "http://goodpose-front.local:8889/stream/whep";
     const BACK_WHEP  = "http://goodpose-back.local:8889/stream/whep";
 
-    // 1. BASE DE DATOS DE LA SECUENCIA: SURYA NAMASKAR A (5 Min / Intermedio)
-    // Cada respiración dura 5.5 segundos.
+    // 1. SECUENCIA COMPLETA DE SURYA NAMASKAR A (5 Minutos / Intermedio)
     const SEQUENCE = [
       { id: "samasthiti", name: "Postura de la Montaña", sanskrit: "Samasthiti", durationBreaths: 11, durationSec: 60, img: "samasthiti.png", script: "Comienza en la Postura de la Montaña, Samasthiti. Enraíza los pies en la esterilla, alarga la coronilla al cielo y respira profundo." },
       { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, eleva los brazos al cielo, Urdhva Hastasana. Alarga los costados." },
@@ -198,7 +308,7 @@
       { id: "uttanasana", name: "Flexión hacia adelante", sanskrit: "Uttanasana", durationBreaths: 1, durationSec: 5, img: "uttanasana.png", script: "Exhala, pliega el torso hacia las piernas." },
       { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, ponte de pie elevando brazos al cielo." },
       { id: "samasthiti", name: "Postura de la Montaña", sanskrit: "Samasthiti", durationBreaths: 1, durationSec: 5, img: "samasthiti.png", script: "Exhala, manos al pecho en Samasthiti." },
-      // Repetición 2
+      // Vuelta 2
       { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, eleva los brazos, alarga la energía." },
       { id: "uttanasana", name: "Flexión hacia adelante", sanskrit: "Uttanasana", durationBreaths: 1, durationSec: 5, img: "uttanasana.png", script: "Exhala, desciende suavemente a la tierra." },
       { id: "ardha_uttanasana", name: "Media flexión", sanskrit: "Ardha Uttanasana", durationBreaths: 1, durationSec: 5, img: "ardha uttanasana.png", script: "Inhala, proyecta el pecho al horizonte." },
@@ -209,7 +319,7 @@
       { id: "uttanasana", name: "Flexión hacia adelante", sanskrit: "Uttanasana", durationBreaths: 1, durationSec: 5, img: "uttanasana.png", script: "Exhala, entrégate al estiramiento." },
       { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, crece hacia arriba con todo tu cuerpo." },
       { id: "samasthiti", name: "Postura de la Montaña", sanskrit: "Samasthiti", durationBreaths: 1, durationSec: 5, img: "samasthiti.png", script: "Exhala, Samasthiti. Calma tu respiración." },
-      // Repetición 3
+      // Vuelta 3
       { id: "urdhva_hastasana", name: "Brazos hacia el cielo", sanskrit: "Urdhva Hastasana", durationBreaths: 1, durationSec: 5, img: "urdhva hastasana.png", script: "Inhala, brazos al cielo, Urdhva Hastasana." },
       { id: "uttanasana", name: "Flexión hacia adelante", sanskrit: "Uttanasana", durationBreaths: 1, durationSec: 5, img: "uttanasana.png", script: "Exhala, pliega el cuerpo desde la cadera." },
       { id: "ardha_uttanasana", name: "Media flexión", sanskrit: "Ardha Uttanasana", durationBreaths: 1, durationSec: 5, img: "ardha uttanasana.png", script: "Inhala, media pinza, alarga la espalda." },
@@ -222,24 +332,62 @@
       { id: "samasthiti", name: "Postura de la Montaña", sanskrit: "Samasthiti", durationBreaths: 4, durationSec: 20, img: "samasthiti.png", script: "Exhala en Samasthiti. Cierra los ojos y siente la energía fluir por tu cuerpo." }
     ];
 
+    // 2. BANCO DE FEEDBACK POSITIVO ALEATORIO (>88% de precisión)
+    const POSITIVE_FEEDBACKS = [
+      "Alineación impecable. Siente la estabilidad en la postura.",
+      "Hermosa postura. Mantén tu respiración serena y constante.",
+      "Excelente control corporal y presencia.",
+      "Postura perfecta. Continúa habitando este espacio con calma.",
+      "Muy buena extensión, estás completamente alineada.",
+      "Exactamente así. Deja que la postura respire por sí sola.",
+      "Gran profundidad y equilibrio. Muy bien sostenido.",
+      "Tu alineación es óptima en este momento.",
+      "Siente la firmeza y la comodidad de la postura, excelente.",
+      "Maravilloso ajuste. Mantén esa energía fluida."
+    ];
+
+    // 3. PARÁMETROS BIOMECÁNICOS TEÓRICOS
+    const IDEAL_RULES = {
+      samasthiti:       { knee: 180, hip: 180, shoulder: 20,  elbow: 180 },
+      urdhva_hastasana: { knee: 180, hip: 180, shoulder: 180, elbow: 180 },
+      uttanasana:       { knee: 175, hip: 40,  shoulder: 30,  elbow: 180 },
+      ardha_uttanasana: { knee: 175, hip: 90,  shoulder: 40,  elbow: 180 },
+      chaturanga:       { knee: 180, hip: 180, shoulder: 25,  elbow: 90  },
+      urdhva_mukha:     { knee: 180, hip: 140, shoulder: 85,  elbow: 180 },
+      adho_mukha:       { knee: 180, hip: 75,  shoulder: 180, elbow: 180 }
+    };
+
     // Variables de Estado
     let currentPoseIndex = 0;
     let poseTimeRemaining = 0;
     let poseTimer = null;
     let lastSpokenTime = 0;
-    const SPEECH_GAP_MS = 5500; // Ventana para no interrumpir respiraciones
+    const SPEECH_GAP_MS = 6000;
     let selectedVoice = null;
+    let feedbackGivenInCurrentPose = false;
 
-    // Reglas Biomecánicas Teóricas
-    const IDEAL_RULES = {
-      samasthiti: { knee: 180, hip: 180, shoulder: 20, elbow: 180 },
-      urdhva_hastasana: { knee: 180, hip: 180, shoulder: 180, elbow: 180 },
-      uttanasana: { knee: 175, hip: 40, shoulder: 30, elbow: 180 },
-      ardha_uttanasana: { knee: 175, hip: 90, shoulder: 40, elbow: 180 },
-      chaturanga: { knee: 180, hip: 180, elbow: 90, shoulder: 25 },
-      urdhva_mukha: { knee: 180, hip: 140, shoulder: 85, elbow: 180 },
-      adho_mukha: { knee: 180, hip: 75, shoulder: 180, elbow: 180 }
-    };
+    // Inicializar Voz Femenina
+    function initVoice() {
+      const voices = window.speechSynthesis.getVoices();
+      selectedVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Mónica') || v.name.includes('Paulina') || v.name.includes('Siri') || v.name.includes('Female'))) ||
+                      voices.find(v => v.lang.startsWith('es'));
+    }
+    window.speechSynthesis.onvoiceschanged = initVoice;
+    initVoice();
+
+    function hablar(texto, urgente = false) {
+      const now = Date.now();
+      if (!urgente && (now - lastSpokenTime < SPEECH_GAP_MS)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(texto);
+      if (selectedVoice) u.voice = selectedVoice;
+      u.lang = 'es-ES';
+      u.rate = 0.9;
+      u.pitch = 1.05;
+      window.speechSynthesis.speak(u);
+      lastSpokenTime = now;
+      document.getElementById('coach-text').innerText = texto;
+    }
 
     // Navegación del Wizard
     function selectOption(elem, type, val) {
@@ -261,29 +409,6 @@
       document.getElementById(tabId).classList.add('active');
     }
 
-    // Inicializar Voz Femenina
-    function initVoice() {
-      const voices = window.speechSynthesis.getVoices();
-      selectedVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Mónica') || v.name.includes('Paulina') || v.name.includes('Siri') || v.name.includes('Female'))) ||
-                      voices.find(v => v.lang.startsWith('es'));
-    }
-    window.speechSynthesis.onvoiceschanged = initVoice;
-    initVoice();
-
-    function hablar(texto, urgente = false) {
-      const now = Date.now();
-      if (!urgente && (now - lastSpokenTime < SPEECH_GAP_MS)) return;
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(texto);
-      if (selectedVoice) u.voice = selectedVoice;
-      u.lang = 'es-ES';
-      u.rate = 0.9; // Ritmo pausado de yoga
-      u.pitch = 1.05;
-      window.speechSynthesis.speak(u);
-      lastSpokenTime = now;
-      document.getElementById('coach-text').innerText = texto;
-    }
-
     // Iniciar Sesión de Clase
     function startSession() {
       document.getElementById('wizard').style.display = 'none';
@@ -298,9 +423,10 @@
 
     function loadPose(idx) {
       if (idx >= SEQUENCE.length) {
-        hablar("Práctica finalizada. Namasté.", true);
+        hablar("Práctica completada con éxito. Namasté.", true);
         return;
       }
+      feedbackGivenInCurrentPose = false;
       const pose = SEQUENCE[idx];
       document.getElementById('pose-display-name').innerText = pose.name;
       document.getElementById('pose-sanskrit-name').innerText = pose.sanskrit;
@@ -309,7 +435,6 @@
       poseTimeRemaining = pose.durationSec;
       updateBreathDisplay(poseTimeRemaining);
 
-      // Guion maestro de entrada
       hablar(pose.script, true);
 
       clearInterval(poseTimer);
@@ -326,12 +451,10 @@
     }
 
     function updateBreathDisplay(secLeft) {
-      // 1 respiración equivale aprox a 5.5 segundos
       const breaths = Math.max(1, Math.round(secLeft / 5.5));
       document.getElementById('breath-timer').innerText = `🌬️ ${breaths} ${breaths === 1 ? 'Respiración' : 'Respiraciones'}`;
     }
 
-    // Biomecánica Vectorial
     function calcularAngulo(A, B, C) {
       const v1 = { x: A.x - B.x, y: A.y - B.y };
       const v2 = { x: C.x - B.x, y: C.y - B.y };
@@ -341,12 +464,11 @@
       return Math.round(Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2)))) * (180 / Math.PI));
     }
 
-    // Motor de Evaluación de Pose y Puntuación 0-100%
+    // Motor Biomecánico y Puntuación
     function evaluarPoseEnVivo(lm) {
       const current = SEQUENCE[currentPoseIndex];
       const rules = IDEAL_RULES[current.id] || IDEAL_RULES.samasthiti;
 
-      // Cálculo de ángulos actuales
       const angKnee = calcularAngulo(lm[23], lm[25], lm[27]);
       const angHip = calcularAngulo(lm[11], lm[23], lm[27]);
       const angShoulder = calcularAngulo(lm[15], lm[11], lm[23]);
@@ -362,21 +484,60 @@
       const diffKnee = Math.abs(angKnee - rules.knee);
       const diffHip = Math.abs(angHip - rules.hip);
       const diffShoulder = Math.abs(angShoulder - rules.shoulder);
+      const diffElbow = Math.abs(angElbow - rules.elbow);
 
-      let accuracy = 100 - ((diffKnee * 0.4) + (diffHip * 0.4) + (diffShoulder * 0.2));
+      let accuracy = 100 - ((diffKnee * 0.35) + (diffHip * 0.35) + (diffShoulder * 0.15) + (diffElbow * 0.15));
       accuracy = Math.max(0, Math.min(100, Math.round(accuracy)));
       document.getElementById('global-score').innerText = `${accuracy}%`;
 
-      // Inserción de correcciones durante los silencios de respiración
-      if (poseTimeRemaining > 4) { // Dejar silencio en transiciones
-        if (accuracy > 88) {
-          hablar("Alineación perfecta. Mantén la calma en la postura.");
-        } else if (diffKnee > 25 && current.id !== 'uttanasana') {
-          hablar("Extiende un poco más las piernas empujando los muslos hacia atrás.");
-        } else if (diffHip > 20 && current.id === 'adho_mukha') {
-          hablar("Eleva más los isquiones hacia el cielo para profundizar la V invertida.");
-        } else if (diffShoulder > 25 && current.id === 'urdhva_mukha') {
-          hablar("Aleja los hombros de las orejas y expande el pecho.");
+      // Evaluación en los silencios de la respiración
+      if (poseTimeRemaining > 3 && !feedbackGivenInCurrentPose) {
+        if (accuracy >= 88) {
+          const randomPositive = POSITIVE_FEEDBACKS[Math.floor(Math.random() * POSITIVE_FEEDBACKS.length)];
+          hablar(randomPositive);
+          feedbackGivenInCurrentPose = true;
+          return;
+        }
+
+        let mensajeCorreccion = "";
+
+        switch (current.id) {
+          case "adho_mukha":
+            if (diffKnee > 20) mensajeCorreccion = "Empuja suavemente los muslos hacia atrás para estirar las piernas sin bloquear las rodillas.";
+            else if (diffHip > 20) mensajeCorreccion = "Eleva más los isquiones hacia el cielo para formar una V invertida profunda.";
+            else if (diffShoulder > 25) mensajeCorreccion = "Empuja el pecho suavemente hacia las rodillas y relaja la cabeza entre los brazos.";
+            break;
+
+          case "chaturanga":
+            if (diffElbow > 25) mensajeCorreccion = "Mantén los codos flexionados a noventa grados, firmes y bien pegados a las costillas.";
+            else if (diffHip > 20) mensajeCorreccion = "Activa el abdomen para que la pelvis no caiga hacia la esterilla.";
+            break;
+
+          case "urdhva_mukha":
+            if (diffShoulder > 20) mensajeCorreccion = "Rueda los hombros hacia atrás y abajo, alejándolos por completo de las orejas.";
+            else if (diffElbow > 20) mensajeCorreccion = "Extiende los brazos con firmeza y proyecta el esternón hacia el frente.";
+            break;
+
+          case "uttanasana":
+            if (diffHip > 25) mensajeCorreccion = "Permite que el pliegue nazca desde las ingles, alargando la columna hacia el suelo.";
+            break;
+
+          case "ardha_uttanasana":
+            if (diffHip > 20) mensajeCorreccion = "Busca una línea recta desde la coronilla hasta el coxis, con la espalda paralela al suelo.";
+            break;
+
+          case "urdhva_hastasana":
+            if (diffShoulder > 25) mensajeCorreccion = "Estira los brazos al máximo hacia el techo sin tensar los hombros.";
+            break;
+
+          case "samasthiti":
+            if (diffKnee > 15) mensajeCorreccion = "Distribuye el peso por igual en ambos pies y mantén las piernas firmes pero activas.";
+            break;
+        }
+
+        if (mensajeCorreccion) {
+          hablar(mensajeCorreccion);
+          feedbackGivenInCurrentPose = true;
         }
       }
     }
